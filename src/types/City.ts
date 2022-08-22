@@ -1,15 +1,17 @@
 interface City {
   name: string,
   country: string,
-  temp: string,
-  fells_like: string,
+  temp: number,
+  feels_like: number,
   main: string,
   description: string,
-  speed: string,
+  speed: number,
   pressure: string,
   humidity: string,
-  dew_point: string,
-  visibility: string,
-  id?: string
+  dew_point: number,
+  visibility: number,
+  id?: string | number,
+  lon: string | number,
+  lat: string | number,
 }
 export default City

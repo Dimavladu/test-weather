@@ -1,30 +1,87 @@
 <template>
   <body>
-    <Transition>
-      <widget-card
-        class="card"
-        :toggle="toggle"
+    <!-- <Transition> -->
+    <widget-list
+      v-show="toggle"
+      :cities="cities"
+      @changeToggle="toggle = !toggle"
+    />
+    <!-- </Transition> -->
+    <keep-alive>
+      <widget-settings
+        v-show="!toggle"
+        v-model="cities"
         @changeToggle="toggle = !toggle"
-        v-if="toggle"
+        @removeCity="(id) => removeCity(id)"
+        @addCity="(textCity) => addCity(textCity)"
+        :error="error"
       />
-    </Transition>
-    <widget-settings @changeToggle="toggle = !toggle" v-if="!toggle" />
+    </keep-alive>
   </body>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, onMounted, watch, onUpdated } from "vue";
+import { getGeolocation, getInfo } from "./service/weather";
 
-import widgetCard from "./components/widgetCard.vue";
+import widgetList from "./components/widgetList.vue";
 import widgetSettings from "./components/widgetSettings.vue";
+
+import City from "./types/City";
+import Coordinates from "./types/Coordinates";
 
 export default defineComponent({
   name: "App",
-  components: { widgetCard, widgetSettings },
+  components: { widgetList, widgetSettings },
   setup() {
+    const cities = ref<City[]>([]);
     const toggle = ref<Boolean>(false);
+    const error = ref<string>("");
 
-    return { toggle };
+    onMounted(() => {
+      const citiesData: any = localStorage.getItem("CITIES");
+      cities.value = JSON.parse(citiesData);
+    });
+    watch(
+      () => toggle.value,
+      async () => {
+        const updCities: City[] = await Promise.all(
+          cities.value.map(async (city, idx) => {
+            const coordinates: Coordinates = {
+              lat: city.lat.toString(),
+              lon: city.lon.toString(),
+            };
+            const cityData = await getInfo(coordinates);
+            return { ...cityData, id: idx };
+          })
+        );
+        cities.value = updCities;
+      }
+    );
+
+    const removeCity = (id: string): void => {
+      cities.value = cities.value.filter((city) => city.id !== id);
+      cities.value.map((city, idx) => (city.id = idx));
+    };
+    const addCity = async (textCity: string): Promise<void> => {
+      try {
+        const coordinates: any = await getGeolocation(textCity);
+        const city: City = await getInfo(coordinates);
+        cities.value.push({ ...city, id: cities.value.length });
+      } catch (e) {
+        console.log(e);
+        error.value = "Please enter correct city";
+      }
+    };
+    watch(
+      cities,
+      (newCities) => {
+        console.log("changed");
+        localStorage.setItem("CITIES", JSON.stringify(newCities));
+      },
+      { deep: true }
+    );
+    return { toggle, cities, removeCity, addCity, error };
   },
 });
 </script>
