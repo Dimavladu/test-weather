@@ -1,12 +1,10 @@
 <template>
   <body>
-    <!-- <Transition> -->
     <widget-list
       v-show="toggle"
       :cities="cities"
       @changeToggle="toggle = !toggle"
     />
-    <!-- </Transition> -->
     <keep-alive>
       <widget-settings
         v-show="!toggle"
